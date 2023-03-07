@@ -647,7 +647,7 @@ const BookTable = ({
               </IconButton>
             </Grid>
             <Grid item xs={6}>
-              <IconButton onClick={() => fetchBook()}>
+              <IconButton onClick={fetchBook}>
                 <Refresh />
               </IconButton>
             </Grid>
