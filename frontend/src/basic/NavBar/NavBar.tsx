@@ -96,8 +96,8 @@ const NavBar = ({ width, height }: NavBarProps): JSX.Element => {
         TabIndicatorProps={{ sx: { height: '0.3em', position: 'absolute', top: 0 } }}
         variant='fullWidth'
         value={page}
-        indicatorColor={settings.network === 'mainnet' ? 'primary' : 'secondary'}
-        textColor={settings.network === 'mainnet' ? 'primary' : 'secondary'}
+        indicatorColor={color}
+        textColor={color}
         onChange={changePage}
       >
         <Tab
