@@ -70,12 +70,16 @@ export interface fetchRobotProps {
   setBadRequest?: (state: string) => void;
 }
 
+export interface Federation {
+  [key: string]: Coordinator;
+}
+
 export type TorStatus = 'NOTINIT' | 'STARTING' | '"Done"' | 'DONE';
 
 export interface AppContextProps {
   torStatus: TorStatus;
-  federation: Coordinator[];
-  setFederation: (state: Coordinator[]) => void;
+  federation: Federation;
+  setFederation: (state: Federation) => void;
   settings: Settings;
   setSettings: (state: Settings) => void;
   book: Book;
@@ -95,8 +99,8 @@ export interface AppContextProps {
   setRobot: (state: Robot) => void;
   exchange: Exchange;
   setExchange: (state: Exchange) => void;
-  focusedCoordinator: number;
-  setFocusedCoordinator: (state: number) => void;
+  focusedCoordinator: string;
+  setFocusedCoordinator: (state: string) => void;
   baseUrl: string;
   setBaseUrl: (state: string) => void;
   fav: Favorites;
@@ -215,11 +219,14 @@ export const AppContextProvider = ({
   const [robot, setRobot] = useState<Robot>(new Robot(garage.slots[currentSlot].robot));
   const [maker, setMaker] = useState<Maker>(defaultMaker);
   const [exchange, setExchange] = useState<Exchange>(new Exchange());
-  const [federation, setFederation] = useState<Coordinator[]>(
-    defaultFederation.map((c) => new Coordinator(c)),
+  const [federation, setFederation] = useState<Federation>(
+    Object.entries(defaultFederation).reduce((acc, [key, value]) => {
+      acc[key] = new Coordinator(value);
+      return acc;
+    }, {}),
   );
   console.log(federation);
-  const [focusedCoordinator, setFocusedCoordinator] = useState<number>(0);
+  const [focusedCoordinator, setFocusedCoordinator] = useState<string>('');
   const [baseUrl, setBaseUrl] = useState<string>('');
   const [fav, setFav] = useState<Favorites>({ type: null, currency: 0, mode: 'fiat' });
 
@@ -300,9 +307,9 @@ export const AppContextProvider = ({
   };
 
   const fetchLimits = function () {
-    federation.map((coordinator, i) => {
+    Object.entries(federation).map(([shortAlias, coordinator]) => {
       if (coordinator.enabled === true) {
-        coordinator.fetchLimits({ bitcoin: 'mainnet', network: 'Clearnet' }, () =>
+        coordinator.fetchLimits({ bitcoin: 'mainnet', network: 'Onion' }, () =>
           setFederation((f) => {
             return f;
           }),
@@ -312,9 +319,9 @@ export const AppContextProvider = ({
   };
 
   const fetchInfo = function () {
-    federation.map((coordinator, i) => {
+    Object.entries(federation).map(([shortAlias, coordinator]) => {
       if (coordinator.enabled === true) {
-        coordinator.fetchInfo({ bitcoin: 'mainnet', network: 'Clearnet' }, () =>
+        coordinator.fetchInfo({ bitcoin: 'mainnet', network: 'Onion' }, () =>
           setFederation((f) => {
             return f;
           }),
