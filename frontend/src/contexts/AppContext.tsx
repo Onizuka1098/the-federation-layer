@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 import { Page } from '../basic/NavBar';
 import { OpenDialogs } from '../basic/MainDialogs';
 
@@ -77,10 +77,63 @@ export interface Federation {
 
 export type TorStatus = 'NOTINIT' | 'STARTING' | '"Done"' | 'DONE';
 
+const initialFederation = Object.entries(defaultFederation).reduce((acc, [key, value]) => {
+  acc[key] = new Coordinator(value);
+  return acc;
+}, {});
+
+const reduceFederation = (federation, action) => {
+  switch (action.type) {
+    case 'enable':
+      return {
+        ...federation,
+        [action.payload.shortAlias]: {
+          ...federation[action.payload.shortAlias],
+          enabled: true,
+        },
+      };
+    case 'disable':
+      return {
+        ...federation,
+        [action.payload.shortAlias]: {
+          ...federation[action.payload.shortAlias],
+          enabled: false,
+        },
+      };
+    case 'updateBook':
+      return {
+        ...federation,
+        [action.payload.shortAlias]: {
+          ...federation[action.payload.shortAlias],
+          book: action.payload.book,
+          loadingBook: action.payload.loadingBook,
+        },
+      };
+    case 'updateInfo':
+      return {
+        ...federation,
+        [action.payload.shortAlias]: {
+          ...federation[action.payload.shortAlias],
+          info: action.payload.info,
+          loadingInfo: action.payload.loadingInfo,
+        },
+      };
+    default:
+      throw new Error(`Unhandled action type: ${action.type}`);
+  }
+};
+
+const initialBook: Book = {
+  orders: [],
+  loading: true,
+  loadedCoordinators: 0,
+  totalCoordinators: Object.keys(initialFederation).length,
+};
+
 export interface AppContextProps {
   torStatus: TorStatus;
   federation: Federation;
-  setFederation: (state: Federation) => void;
+  dispatchFederation: () => void;
   settings: Settings;
   setSettings: (state: Settings) => void;
   book: Book;
@@ -89,7 +142,7 @@ export interface AppContextProps {
   currentSlot: number;
   setCurrentSlot: (state: number) => void;
   setBook: (state: Book) => void;
-  fetchBook: () => void;
+  fetchFederationBook: () => void;
   limits: { list: LimitList; loading: boolean };
   setLimits: (state: { list: LimitList; loading: boolean }) => void;
   fetchLimits: () => void;
@@ -151,7 +204,7 @@ const closeAll = {
 //   setSettings: () => null,
 //   book: { orders: [], loading: true },
 //   setBook: () => null,
-//   fetchBook: () => null,
+//   fetchFederationBook: () => null,
 //   limits: {
 //     list: [],
 //     loading: true,
@@ -206,7 +259,7 @@ export const AppContextProvider = ({
 
   // All app data structured
   const [torStatus, setTorStatus] = useState<TorStatus>('NOTINIT');
-  const [book, setBook] = useState<Book>({ orders: [], loading: true });
+  const [book, setBook] = useState<Book>(initialBook);
   const [limits, setLimits] = useState<{ list: LimitList; loading: boolean }>({
     list: [],
     loading: true,
@@ -220,13 +273,8 @@ export const AppContextProvider = ({
   const [robot, setRobot] = useState<Robot>(new Robot(garage.slots[currentSlot].robot));
   const [maker, setMaker] = useState<Maker>(defaultMaker);
   const [exchange, setExchange] = useState<Exchange>(new Exchange());
-  const [federation, setFederation] = useState<Federation>(
-    Object.entries(defaultFederation).reduce((acc, [key, value]) => {
-      acc[key] = new Coordinator(value);
-      return acc;
-    }, {}),
-  );
-  console.log(federation);
+  const [federation, dispatchFederation] = useReducer(reduceFederation, initialFederation);
+
   const [focusedCoordinator, setFocusedCoordinator] = useState<string>('');
   const [baseUrl, setBaseUrl] = useState<string>('');
   const [fav, setFav] = useState<Favorites>({ type: null, currency: 0, mode: 'fiat' });
@@ -267,9 +315,9 @@ export const AppContextProvider = ({
     }
 
     if (baseUrl != '') {
-      setBook({ orders: [], loading: true });
+      setBook(initialBook);
       setLimits({ list: [], loading: true });
-      fetchBook();
+      fetchFederationBook();
       fetchLimits();
     }
     return () => {
@@ -297,56 +345,126 @@ export const AppContextProvider = ({
     setWindowSize(getWindowSize(theme.typography.fontSize));
   };
 
-  const fetchBook = function () {
+  const fetchCoordinatorBook = async (coordinator: Coordinator) => {
+    const bitcoin = 'mainnet';
+    const network = 'Clearnet';
+    const url = coordinator[bitcoin][network];
+    const book = await apiClient
+      .get(url, '/api/book/')
+      .then((data) => {
+        return data.not_found ? [] : data;
+      })
+      .catch(() => {
+        return [];
+      });
+    dispatchFederation({
+      type: 'updateBook',
+      payload: { shortAlias: coordinator.shortAlias, book, loadingBook: false },
+    });
+  };
+
+  const fetchFederationBook = function () {
     Object.entries(federation).map(([shortAlias, coordinator]) => {
-      if (coordinator.enabled === true) {
-        coordinator.fetchBook({ bitcoin: 'mainnet', network: 'Clearnet' }, (orders) => {
-          setFederation((f) => {
-            return f;
-          });
-          setBook((book) => {
-            return { orders, loading: false };
-          });
+      if (coordinator?.enabled === true) {
+        dispatchFederation({
+          type: 'updateBook',
+          payload: { shortAlias, book: coordinator.book, loadingBook: true },
         });
+        fetchCoordinatorBook(coordinator);
+        console.log(federation);
       }
     });
   };
 
-  // useEffect(() => {
-  //   setBook({orders:book.orders,loading:true})
-  //   let newBook:PublicOrder[] = []
-  //   Object.values(federation).map((coordinator)=> {
-  //     if (coordinator.enabled) {
-  //       newBook.push(coordinator.orders)
-  //     }
-  //     setBook({orders:newBook,loading:false})
-  //   })
-  //   console.log("book",book)
-  // },[federation])
+  const fetchCoordinatorInfo = async (coordinator: Coordinator) => {
+    const bitcoin = 'mainnet';
+    const network = 'Clearnet';
+    const url = coordinator[bitcoin][network];
+    const info = await apiClient
+      .get(url, '/api/info/')
+      .then((data) => {
+        return data;
+      })
+      .catch(() => {
+        return undefined;
+      });
+    dispatchFederation({
+      type: 'updateInfo',
+      payload: { shortAlias: coordinator.shortAlias, info, loadingInfo: false },
+    });
+  };
+
+  const fetchFederationInfo = function () {
+    Object.entries(federation).map(([shortAlias, coordinator]) => {
+      if (coordinator?.enabled === true) {
+        dispatchFederation({
+          type: 'updateInfo',
+          payload: { shortAlias, info: coordinator.info, loadingInfo: true },
+        });
+        fetchCoordinatorInfo(coordinator);
+      }
+    });
+  };
+
+  console.log(federation);
+  console.log(book);
+
+  const updateBook = () => {
+    setBook((book) => {
+      return { ...book, loading: true, loadedCoordinators: 0 };
+    });
+    let orders: PublicOrder[] = book.orders;
+    let loadedCoordinators: number = 0;
+    let totalCoordinators: number = 0;
+    Object.values(federation).map((coordinator) => {
+      if (coordinator.enabled) {
+        totalCoordinators = totalCoordinators + 1;
+        if (!coordinator.loadingBook) {
+          const existingOrders = orders.filter(
+            (order) => order.coordinatorShortAlias !== coordinator.shortAlias,
+          );
+          console.log('Existing Orders', existingOrders);
+          const newOrders: PublicOrder[] = coordinator.book.map((order) => ({
+            ...order,
+            coordinatorShortAlias: coordinator.shortAlias,
+          }));
+          orders = [...existingOrders, ...newOrders];
+          // orders.push.apply(existingOrders, newOrders);
+          loadedCoordinators = loadedCoordinators + 1;
+        }
+      }
+      const loading = loadedCoordinators != totalCoordinators;
+      setBook({ orders, loading, loadedCoordinators, totalCoordinators });
+    });
+  };
+
+  useEffect(() => {
+    updateBook();
+  }, [federation]);
 
   const fetchLimits = function () {
-    Object.entries(federation).map(([shortAlias, coordinator]) => {
-      if (coordinator.enabled) {
-        coordinator.fetchLimits({ bitcoin: 'mainnet', network: 'Clearnet' }, () =>
-          setFederation((f) => {
-            return f;
-          }),
-        );
-      }
-    });
+    //   Object.entries(federation).map(([shortAlias, coordinator]) => {
+    //     if (coordinator.enabled) {
+    //       coordinator.fetchLimits({ bitcoin: 'mainnet', network: 'Clearnet' }, () =>
+    //         setFederation((f) => {
+    //           return f;
+    //         }),
+    //       );
+    //     }
+    //   });
   };
 
-  const fetchInfo = function () {
-    Object.entries(federation).map(([shortAlias, coordinator]) => {
-      if (coordinator.enabled) {
-        coordinator.fetchInfo({ bitcoin: 'mainnet', network: 'Clearnet' }, () =>
-          setFederation((f) => {
-            return f;
-          }),
-        );
-      }
-    });
-  };
+  // const fetchInfo = function () {
+  //   Object.entries(federation).map(([shortAlias, coordinator]) => {
+  //     if (coordinator.enabled) {
+  //       coordinator.fetchInfo({ bitcoin: 'mainnet', network: 'Clearnet' }, () =>
+  //         setFederation((f) => {
+  //           return f;
+  //         }),
+  //       );
+  //     }
+  //   });
+  // };
 
   useEffect(() => {
     exchange.updateInfo(federation, () =>
@@ -364,12 +482,12 @@ export const AppContextProvider = ({
 
   useEffect(() => {
     if (open.exchange) {
-      fetchInfo();
+      fetchFederationInfo();
     }
   }, [open.exchange, open.coordinator, torStatus]);
 
   useEffect(() => {
-    fetchInfo();
+    fetchFederationInfo();
   }, []);
 
   // useEffect(() => {
@@ -526,12 +644,12 @@ export const AppContextProvider = ({
         book,
         setBook,
         federation,
-        setFederation,
+        dispatchFederation,
         garage,
         setGarage,
         currentSlot,
         setCurrentSlot,
-        fetchBook,
+        fetchFederationBook,
         limits,
         setLimits,
         fetchLimits,

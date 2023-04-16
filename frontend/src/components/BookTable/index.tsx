@@ -63,7 +63,8 @@ const BookTable = ({
   showNoResults = true,
   onOrderClicked = () => null,
 }: BookTableProps): JSX.Element => {
-  const { book, fetchBook, fav, setFav, baseUrl } = useContext<AppContextProps>(AppContext);
+  const { book, fetchFederationBook, fav, setFav, baseUrl } =
+    useContext<AppContextProps>(AppContext);
 
   const { t } = useTranslation();
   const theme = useTheme();
@@ -647,7 +648,7 @@ const BookTable = ({
               </IconButton>
             </Grid>
             <Grid item xs={6}>
-              <IconButton onClick={fetchBook}>
+              <IconButton onClick={fetchFederationBook}>
                 <Refresh />
               </IconButton>
             </Grid>

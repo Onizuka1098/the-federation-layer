@@ -13,8 +13,16 @@ import { BarChart, FormatListBulleted } from '@mui/icons-material';
 import { AppContext, AppContextProps } from '../../contexts/AppContext';
 
 const BookPage = (): JSX.Element => {
-  const { robot, fetchBook, clearOrder, windowSize, setPage, setCurrentOrder, setDelay, setOrder } =
-    useContext<AppContextProps>(AppContext);
+  const {
+    robot,
+    fetchFederationBook,
+    clearOrder,
+    windowSize,
+    setPage,
+    setCurrentOrder,
+    setDelay,
+    setOrder,
+  } = useContext<AppContextProps>(AppContext);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [view, setView] = useState<'list' | 'depth'>('list');
@@ -27,7 +35,7 @@ const BookPage = (): JSX.Element => {
   const chartWidthEm = width - maxBookTableWidth;
 
   useEffect(() => {
-    fetchBook();
+    fetchFederationBook();
   }, []);
 
   const onViewOrder = function () {
