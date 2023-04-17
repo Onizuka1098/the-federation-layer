@@ -27,8 +27,8 @@ export interface PublicOrder {
 export interface Book {
   orders: PublicOrder[];
   loading: boolean;
-  loadedCoordinators: Number;
-  totalCoordinators: Number;
+  loadedCoordinators: number;
+  totalCoordinators: number;
 }
 
 export default PublicOrder;

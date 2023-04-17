@@ -43,11 +43,12 @@ const BookPage = (): JSX.Element => {
     setDelay(10000);
   };
 
-  const onOrderClicked = function (id: number) {
+  const onOrderClicked = function (id: number, shortAlias: string) {
     if (robot.avatarLoaded) {
-      navigate('/order/' + id);
+      const order = `${shortAlias}/${id}`;
+      navigate(`/order/${order}`);
       setPage('order');
-      setCurrentOrder(id);
+      setCurrentOrder(order);
       setOrder(undefined);
       setDelay(10000);
     } else {
