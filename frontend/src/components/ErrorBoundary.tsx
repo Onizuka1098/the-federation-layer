@@ -29,7 +29,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     }, 10000);
   }
   render() {
-    if (this.state.hasError) {
+    if (!this.state.hasError) {
       return (
         <div style={{ overflow: 'auto' }}>
           <h2>Something is borked! Restarting app in 10 seconds...</h2>
