@@ -288,7 +288,7 @@ export const AppContextProvider = ({
   const theme = useTheme();
 
   // All app data structured
-  const network = 'Clearnet';
+  const network = 'Onion';
   const [torStatus, setTorStatus] = useState<TorStatus>('NOTINIT');
   const [book, setBook] = useState<Book>(initialBook);
   const [limits, setLimits] = useState<Limits>(initialLimits);
@@ -354,7 +354,7 @@ export const AppContextProvider = ({
     if (window.NativeRobosats === undefined) {
       host = getHost();
     } else {
-      host = federation[0][settings.network].Clearnet;
+      host = federation[0][settings.network].Onion;
     }
     setBaseUrl(`http://${host}`);
 
