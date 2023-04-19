@@ -21,11 +21,14 @@ export interface PublicOrder {
   maker_nick: string;
   price: number;
   maker_status: 'Active' | 'Seen recently' | 'Inactive';
+  coordinatorShortAlias?: string;
 }
 
 export interface Book {
   orders: PublicOrder[];
   loading: boolean;
+  loadedCoordinators: number;
+  totalCoordinators: number;
 }
 
 export default PublicOrder;

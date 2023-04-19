@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect, StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 import Main from './basic/Main';
 import { CssBaseline } from '@mui/material';
@@ -62,7 +62,11 @@ const loadApp = () => {
     setTimeout(loadApp, 200);
   } else {
     const root = ReactDOM.createRoot(document.getElementById('app') ?? new HTMLElement());
-    root.render(<App />);
+    root.render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
   }
 };
 

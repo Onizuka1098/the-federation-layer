@@ -15,13 +15,11 @@ import { AppContext, AppContextProps } from '../../contexts/AppContext';
 const BookPage = (): JSX.Element => {
   const {
     robot,
-    fetchBook,
+    fetchFederationBook,
     clearOrder,
     windowSize,
     setPage,
     setCurrentOrder,
-    baseUrl,
-    book,
     setDelay,
     setOrder,
   } = useContext<AppContextProps>(AppContext);
@@ -37,7 +35,7 @@ const BookPage = (): JSX.Element => {
   const chartWidthEm = width - maxBookTableWidth;
 
   useEffect(() => {
-    fetchBook();
+    fetchFederationBook();
   }, []);
 
   const onViewOrder = function () {
@@ -45,12 +43,14 @@ const BookPage = (): JSX.Element => {
     setDelay(10000);
   };
 
-  const onOrderClicked = function (id: number) {
+  const onOrderClicked = function (id: number, shortAlias: string) {
     if (robot.avatarLoaded) {
-      navigate('/order/' + id);
+      const order = `${shortAlias}/${id}`;
+      navigate(`/order/${order}`);
       setPage('order');
-      setCurrentOrder(id);
-      onViewOrder();
+      setCurrentOrder(order);
+      setOrder(undefined);
+      setDelay(10000);
     } else {
       setOpenNoRobot(true);
     }
